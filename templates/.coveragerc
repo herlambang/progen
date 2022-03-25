@@ -1,0 +1,14 @@
+[run]
+source = {project_name}
+branch = True
+data_file = tmp/coverage
+
+[report]
+fail_under = 50
+show_missing = True
+
+[xml]
+output = tmp/coverage.xml
+
+[html]
+directory = tmp/coverage_html

@@ -1,0 +1,54 @@
+include:
+  - project: wartek-id/tooling/cicd-templates
+    file: stages.gitlab-ci.yml
+    ref: master
+
+variables:
+  IMAGE_REPOSITORY: $CI_REGISTRY/$CI_PROJECT_PATH
+  IMAGE_TAG: $CI_COMMIT_SHA
+
+.python:
+  image: python:3.10.3
+  variables:
+    PIP_DISABLE_PIP_VERSION_CHECK: "on"
+
+.poetry:
+  extends: .python
+  variables:
+    POETRY_VERSION: 1.1.13
+    POETRY_HOME: $CI_PROJECT_DIR/.poetry
+    POETRY_VIRTUALENVS_IN_PROJECT: "true"
+    POETRY_NO_INTERACTION: 1
+    POETRY: $POETRY_HOME/bin/poetry
+  before_script:
+    - |
+      [ ! -d $POETRY_HOME ] && curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
+    - python -m venv .venv
+    - .venv/bin/pip install coverage
+    - $POETRY install
+  cache:
+    paths:
+      - $POETRY_HOME
+
+test:
+  extends: .poetry
+  stage: test
+  script:
+    - $POETRY run coverage run -m pytest
+    - $POETRY run coverage report
+    - $POETRY run coverage xml
+  coverage: '/TOTAL.*\s+(\d+\%)/'
+  artifacts:
+    reports:
+      cobertura: tmp/coverage.xml
+
+packaging:
+  extends: .poetry
+  stage: before-build
+  script:
+    - $POETRY build
+  artifacts:
+    name: "$CI_COMMIT_REF_SLUG"
+    paths:
+      - dist/*.whl
+    expire_in: 1 week

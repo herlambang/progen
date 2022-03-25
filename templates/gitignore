@@ -1,0 +1,19 @@
+# Editor
+.vscode
+.idea
+
+# Environment
+.env
+.venv
+dist/
+
+# File system
+.DS_Store
+.pyc
+*.ipynb*
+*.sqlite3
+__pycache__
+tmp/
+.pytest_cache
+.mypy_cache
+

@@ -1,0 +1,54 @@
+[flake8]
+
+################### FILE PATTERNS ##########################
+exclude = 
+    .git,
+    __pycache__,
+    .pytest_cache,
+    .venv,
+    tmp,
+    .vscode,
+    .idea,
+    dist,
+    deployment/*.py
+
+filename =
+    *.py
+
+per-file-ignores = 
+    */__init__.py:D104,F401
+    tests/*.py:D100,D101,D102,D103,D107
+
+########## OPTIONS ##########
+
+disable-noqa = False
+max-line-length = 88
+max-complexity = 10
+select = B,C,D,E,F,I,N,W,B9
+extend-ignore = E203
+application-import-names = {project_name}, tests
+import-order-style = pep8
+docstring-convention = google
+
+################### OUTPUT #################################
+
+########## VERBOSITY ##########
+
+# Increase the verbosity of Flake8’s output.
+verbose = 0
+# Decrease the verbosity of Flake8’s output.
+quiet = 0
+
+
+########## FORMATTING ##########
+
+# Select the formatter used to display errors to the user.
+format = default
+
+# Print the total number of errors.
+count = True
+# Print the source code generating the error/warning in question.
+show-source = True
+# Count the number of occurrences of each error/warning code and print a report.
+statistics = True
+
