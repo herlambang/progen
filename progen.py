@@ -2,6 +2,7 @@
 import argparse
 import importlib
 import logging
+import os
 import shutil
 import subprocess
 import sys
@@ -19,6 +20,23 @@ RESERVED_NAMES = (
     ".git",
 )
 
+TEMPLATES = (
+    ".coveragerc",
+    ".env",
+    ".flake8",
+    ".gitlab-ci.yaml",
+    ".isort.cfg",
+    ".pre-commit-config.yaml",
+    ".vscode/settings.json",
+    "Dockerfile",
+    "gitignore",
+    "peru.yaml",
+)
+
+TEMPLATES_BASE_URL = (
+    "https://raw.githubusercontent.com/herlambang/progen/main/templates"
+)
+
 
 def target_path(adir):
     path = get_target_path(adir)
@@ -29,7 +47,7 @@ def target_path(adir):
                     f"Path is not empty and contains reserved files {RESERVED_NAMES}"
                 )
 
-    return path
+    return adir
 
 
 def get_target_path(adir):
@@ -39,16 +57,28 @@ def get_target_path(adir):
     return path
 
 
+def get_tmp_dir(path: Path):
+    tmp_dir = path.joinpath("tmp")
+    if not tmp_dir.is_dir():
+        tmp_dir.mkdir()
+    return tmp_dir
+
+
+def get_template_dir(path: Path):
+    template_dir = path.joinpath("templates")
+    if not template_dir.is_dir():
+        template_dir.mkdir()
+    return template_dir
+
+
 def get_poetry(cwd: Path):
     poetry_bin = get_poetry_bin()
 
     if not poetry_bin:
-        tmp_dir = cwd.joinpath("tmp")
-        tmp_dir.mkdir()
+        tmp_dir = get_tmp_dir(cwd)
         get_poetry_py = tmp_dir.joinpath("getpoetry.py")
         url = "https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py"
-        logging.info(f"Downloading {url}")
-        urllib.request.urlretrieve(url, get_poetry_py.absolute())
+        download_file(url, get_poetry_py)
 
         poe = importlib.import_module("tmp.getpoetry")
         base_url = poe.Installer.BASE_URL
@@ -74,8 +104,6 @@ def get_poetry(cwd: Path):
         installed = installer.run()
 
         assert installed == 0
-
-        shutil.rmtree(tmp_dir.absolute())
 
 
 def get_poetry_bin():
@@ -126,6 +154,41 @@ def exec_commands(commands):
     return rc
 
 
+def download_file(url, file: Path):
+    try:
+        urllib.request.urlretrieve(url, file.absolute())
+    except Exception as e:
+        logging.error(e)
+        logging.info(f"Cannot download {url}")
+        return None
+    else:
+        logging.info(f"{url} downloaded as {file}")
+        return file
+
+
+def download_templates(path: Path):
+    downloaded = []
+
+    for tpl in TEMPLATES:
+        tpl_url = os.path.join(TEMPLATES_BASE_URL, tpl)
+        tpl_target = path.joinpath(tpl)
+
+        if not tpl_target.exists():
+            tpl_target.parent.mkdir(exist_ok=True, parents=True)
+
+            if d := download_file(tpl_url, tpl_target):
+                downloaded.append(d)
+        else:
+            downloaded.append(tpl_target)
+
+    return downloaded
+
+
+def quit(rc: int, tmp_dir):
+    shutil.rmtree(tmp_dir)
+    exit(rc)
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="python progen.py",
@@ -139,15 +202,23 @@ def main():
     args = parser.parse_args()
 
     cwd = Path.cwd()
-    project_path = get_target_path(args.name)
     project_name = args.name
+    project_path = get_target_path(project_name)
+    tmp_dir = get_tmp_dir(cwd)
+    template_dir = get_template_dir(tmp_dir)
+
+    downloaded = download_templates(template_dir)
+
+    if len(downloaded) < len(TEMPLATES):
+        logging.error("Incomplete templates downloaded")
+        quit(1, tmp_dir)
 
     try:
         get_poetry(cwd)
     except Exception as e:
         logging.error(e)
         logging.error("Unable to install poetry")
-        exit(1)
+        quit(1, tmp_dir)
 
     poetry_bin = get_poetry_bin()
 
@@ -178,37 +249,37 @@ def main():
         },
         {
             "cmd": (
-                "sed 's/{project_name}/new/g' "
-                "templates/.pre-commit-config.yaml > "
+                f"sed 's/{{project_name}}/{project_name}/g' "
+                f"{template_dir}/.pre-commit-config.yaml > "
                 f"{project_name}/.pre-commit-config.yaml"
             ),
             "cwd": cwd,
         },
         {
             "cmd": (
-                "sed 's/{project_name}/new/g' "
-                f"templates/.flake8 > {project_name}/.flake8"
+                f"sed 's/{{project_name}}/{project_name}/g' "
+                f"{template_dir}/.flake8 > {project_name}/.flake8"
             ),
             "cwd": cwd,
         },
         {
             "cmd": (
-                "sed 's/{project_name}/new/g' "
-                f"templates/.coveragerc > {project_name}/.coveragerc"
+                f"sed 's/{{project_name}}/{project_name}/g' "
+                f"{template_dir}/.coveragerc > {project_name}/.coveragerc"
             ),
             "cwd": cwd,
         },
         {
             "cmd": (
-                "cp templates/.isort.cfg templates/.env "
-                "templates/.gitlab-ci.yaml templates/Dockerfile "
-                f"templates/peru.yaml {project_name}; "
-                f"cp templates/gitignore {project_name}/.gitignore"
+                f"cp {template_dir}/.isort.cfg {template_dir}/.env "
+                f"{template_dir}/.gitlab-ci.yaml {template_dir}/Dockerfile "
+                f"{template_dir}/peru.yaml {project_name}; "
+                f"cp {template_dir}/gitignore {project_name}/.gitignore"
             ),
             "cwd": cwd,
         },
         {
-            "cmd": f"cp -r templates/.vscode {project_name}",
+            "cmd": f"cp -r {template_dir}/.vscode {project_name}",
             "cwd": cwd,
         },
         {
@@ -233,7 +304,7 @@ def main():
         """
         print(happy)
 
-    exit(rc)
+    quit(rc, tmp_dir)
 
 
 if __name__ == "__main__":
