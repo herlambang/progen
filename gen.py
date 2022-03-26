@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 import argparse
-import importlib
 import logging
-import os
 import re
 import shutil
 import subprocess
@@ -46,6 +44,17 @@ DEV_DEPS = (
 GIT_IGNORE = """/.vscode /.idea /.env /.venv /dist .DS_Store .pyc
 *.ipynb* *.sqlite3 __pycache__ /tmp .pytest_cache .mypy_cache
 .python-version"""
+
+
+PERU = """
+imports:
+  k8s-deploy: k8s-deploy/
+
+git module k8s-deploy:
+  url: https://gitlab.com/wartek-id/infra/k8s-deploy.git
+  rev: master
+
+"""
 
 
 def download_file(url, file: Path):
@@ -94,10 +103,8 @@ class Generator(object):
         self.tmp_path.mkdir(exist_ok=True)
         self.template_path.mkdir(exist_ok=True)
 
-    def write_gitignore(self):
-        content = self.project_path.joinpath(".gitignore").write_text(
-            re.sub(r"\s+", "\n", GIT_IGNORE)
-        )
+    def write_inline(self, name: str, content: str):
+        self.project_path.joinpath(name).write_text(re.sub(r"\s+", "\n", content))
 
     def download_templates(self):
         downloaded = []
@@ -207,7 +214,8 @@ class Generator(object):
             self.project_path,
         )
         self.download_templates()
-        self.write_gitignore()
+        self.write_inline(".gitignore", GIT_IGNORE)
+        self.write_inline("peru.yaml", PERU)
         self.copy_templates()
         self.shell(
             "git init",
