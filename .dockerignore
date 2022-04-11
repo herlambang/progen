@@ -1,9 +1,0 @@
-.git
-.venv
-.vscode
-Dockerfile
-.python-version
-.DS_Store
-.dockerignore
-.gitignore
-tmp
