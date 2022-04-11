@@ -103,7 +103,7 @@ class Generator(object):
         self.template_path.mkdir(exist_ok=True)
 
     def write_inline(self, name: str, content: str):
-        self.project_path.joinpath(name).write_text(re.sub(r"\s+", "\n", content))
+        self.project_path.joinpath(name).write_text(content)
 
     def download_templates(self):
         downloaded = []
@@ -213,7 +213,7 @@ class Generator(object):
             self.project_path,
         )
         self.download_templates()
-        self.write_inline(".gitignore", GIT_IGNORE)
+        self.write_inline(".gitignore", re.sub(r"\s+", "\n", GIT_IGNORE))
         self.write_inline("peru.yaml", PERU)
         self.copy_templates()
         self.shell(
