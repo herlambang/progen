@@ -24,7 +24,6 @@ TEMPLATES = (
     ".pre-commit-config.yaml",
     ".vscode/settings.json",
     "Dockerfile",
-    "peru.yaml",
 )
 
 TEMPLATES_BASE_URL = (
