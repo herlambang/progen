@@ -16,4 +16,4 @@ WORKDIR /app
 
 COPY . .
 
-CMD ["python", "/app/progen.py"]
+CMD ["python", "/app/gen.py"]
